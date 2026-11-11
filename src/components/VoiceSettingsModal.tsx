@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { VoiceSettings } from '../types/jarvis';
 import { speechEngine, VoiceOption } from '../utils/speechEngine';
 import { sfx } from '../utils/audioSynthesizer';
-import { X, Volume2, Mic, Sliders, Check, User, Sparkles } from 'lucide-react';
+import { X, Volume2, Mic, Sliders, Check, User, Sparkles, Fingerprint } from 'lucide-react';
 
 interface VoiceSettingsModalProps {
   isOpen: boolean;
@@ -11,6 +11,7 @@ interface VoiceSettingsModalProps {
   onUpdateSettings: (newSettings: VoiceSettings) => void;
   userMoniker: string;
   onUpdateUserMoniker: (name: string) => void;
+  onOpenBiometrics?: () => void;
 }
 
 export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
@@ -20,6 +21,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
   onUpdateSettings,
   userMoniker,
   onUpdateUserMoniker,
+  onOpenBiometrics,
 }) => {
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [testPlaying, setTestPlaying] = useState(false);
@@ -250,6 +252,33 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
               >
                 {settings.soundEffects && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
+            </div>
+
+            {/* Biometric Security Protocol Link */}
+            <div className="flex items-center justify-between p-3 bg-cyan-950/20 rounded-lg border border-cyan-500/30">
+              <div className="flex items-center gap-2.5">
+                <Fingerprint className="w-4 h-4 text-cyan-400" />
+                <div>
+                  <div className="text-xs font-orbitron text-slate-200">
+                    BIOMETRIC SECURITY CLEARANCE
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono-tech">
+                    Facial recognition, voice print passphrase & PIN gateway
+                  </div>
+                </div>
+              </div>
+              {onOpenBiometrics && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenBiometrics();
+                  }}
+                  className="px-3 py-1.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400 text-cyan-300 font-orbitron text-xs font-bold transition-all"
+                >
+                  CALIBRATE
+                </button>
+              )}
             </div>
           </div>
         </div>

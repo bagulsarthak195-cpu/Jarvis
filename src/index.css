@@ -167,3 +167,22 @@
 .animate-radar {
   animation: radar-sweep 4s linear infinite;
 }
+
+@keyframes scan-bounce {
+  0% { top: 6%; opacity: 0.3; }
+  50% { top: 92%; opacity: 1; }
+  100% { top: 6%; opacity: 0.3; }
+}
+
+.animate-scan-bounce {
+  animation: scan-bounce 2.2s ease-in-out infinite;
+}
+
+@keyframes spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 2s linear infinite;
+}

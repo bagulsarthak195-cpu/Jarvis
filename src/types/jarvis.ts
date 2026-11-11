@@ -1,5 +1,10 @@
 export type SystemMode = 'standard' | 'alert' | 'stealth' | 'analysis';
 
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -7,8 +12,32 @@ export interface Message {
   timestamp: string;
   protocol?: string | null;
   action?: string | null;
+  windowsAction?: {
+    type: string;
+    raw: string;
+    params?: Record<string, string>;
+  } | null;
+  groundingSources?: GroundingSource[];
+  isSearchingWeb?: boolean;
   latencyMs?: number;
   isStreaming?: boolean;
+}
+
+export interface UserMemoryItem {
+  id: string;
+  category: 'preference' | 'fact' | 'work' | 'personal' | 'custom' | 'project' | 'general';
+  key: string;
+  value: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ConversationSession {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface VoiceSettings {
@@ -78,4 +107,16 @@ export interface ProtocolLog {
   category: 'SYSTEM' | 'VOICE' | 'TACTICAL' | 'DEVICE' | 'NEURAL';
   timestamp: string;
   details: string;
+}
+
+export interface BiometricSecuritySettings {
+  enabled: boolean;
+  lockOnStartup: boolean;
+  authMode: 'hybrid' | 'face' | 'voice' | 'passcode';
+  voicePassphrase: string;
+  securityPin: string;
+  clearanceLevel: 'LEVEL 10 (ALPHA)' | 'LEVEL 7 (TACTICAL)' | 'DIRECTOR (OVERRIDE)';
+  enrolledFaceSnapshot: string | null;
+  enrolledFaceTimestamp?: string | null;
+  autoLockMinutes: number; // 0 = disabled, 2, 5, 15
 }

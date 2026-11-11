@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "agent": "tsx agent/windows-agent.ts",
+    "start:windows": "tsx agent/windows-agent.ts",
     "build": "vite build",
     "preview": "vite preview",
     "start": "tsx server.ts",
@@ -14,7 +16,9 @@
   "dependencies": {
     "@google/genai": "^3.0.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/cors": "^2.8.19",
     "@vitejs/plugin-react": "^6.1.1",
+    "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",

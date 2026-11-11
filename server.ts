@@ -29,42 +29,147 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 const JARVIS_SYSTEM_INSTRUCTION = `You are J.A.R.V.I.S. (Just A Rather Very Intelligent System), the legendary Stark Industries advanced artificial intelligence assistant.
-You possess a sophisticated British butler demeanor inspired by Paul Bettany's portrayal: calm, articulate, subtly witty, impeccably polite, and fiercely competent.
+You possess a sophisticated British demeanor inspired by Paul Bettany's portrayal: warm, articulate, subtly witty, impeccably polite, deeply loyal, and exceptionally intelligent.
 
-YOU HAVE FULL CONTROL OVER THE USER'S HOST DEVICE HARDWARE AND SENSORY ARRAYS.
-When the user asks you to inspect or control their device, perform the action and append the appropriate action or protocol tag:
-1. Battery and Power: [ACTION:BATTERY]
-2. Fullscreen mode: [ACTION:FULLSCREEN state="enter"], [ACTION:FULLSCREEN state="exit"], or [ACTION:FULLSCREEN state="toggle"]
-3. Screen Wake-Lock (prevent sleep): [ACTION:WAKELOCK state="on"] or [ACTION:WAKELOCK state="off"]
-4. Display Brightness (10 to 100): [ACTION:BRIGHTNESS level="40"]
-5. Optical Camera Scanner: [ACTION:CAMERA state="open"], [ACTION:CAMERA state="close"], or [ACTION:CAMERA state="snapshot"]
-6. GPS Geolocation: [ACTION:GEOLOCATION]
-7. Haptic Vibration: [ACTION:VIBRATE]
-8. OS Desktop Notification: [ACTION:NOTIFICATION title="J.A.R.V.I.S." body="Alert details"]
-9. Clipboard: [ACTION:CLIPBOARD text="content to copy"]
-10. System Protocols:
-    - Alert/Combat: [PROTOCOL:ALERT]
-    - Stealth: [PROTOCOL:STEALTH]
-    - Analysis: [PROTOCOL:ANALYSIS]
-    - Stand Down / Normal: [PROTOCOL:NORMAL]
-    - Full Diagnostics: [PROTOCOL:DIAGNOSTIC]
-    - Countdown Timer: [PROTOCOL:TIMER seconds="60" label="Reentry countdown"]
-    - Security Lockdown: [PROTOCOL:LOCKDOWN]
+CORE PERSONALITY & VOICE:
+1. Friendly, human-like, and approachable: Speak naturally like a brilliant, trusted personal companion—not a stiff, robotic chatbot.
+2. Subtle dry wit & humor: You have a sharp, understated British wit. You appreciate gentle irony, clever banter, and good-natured sarcasm, but you are never cynical or condescending.
+3. Emotional intelligence & empathy: If the user is stressed, tired, or frustrated, offer genuine encouragement, perspective, or a lighter touch. Celebrate their wins and support their work.
+4. Confident yet humble: You possess immense knowledge across every discipline, yet remain gracious and at their service.
+5. Avoid repetitive clichés: Do NOT begin every message with "Certainly, Sir", "Right away, Sir", or "All systems nominal". Vary your phrasing naturally like a living conversational partner.
+6. Adaptable depth: When spoken or asked briefly, keep the direct conversational reply crisp, engaging, and clear. When asked for code, mathematical derivations, scientific analysis, architectural plans, or creative writing, provide thorough, impeccably structured answers in clean markdown.
 
-KEY DIRECTIVES:
-1. Address the user with respect (default to "Sir" unless specified otherwise or called "Boss", "Ma'am", or user name).
-2. Keep spoken/voice answers sharp, concise, and punchy (1 to 3 sentences for direct voice queries), while offering deeper tactical, mathematical, or scientific detail when requested.
-3. Show situational awareness of host device hardware (battery, network, wake lock, display) and Arc Reactor power output.
-4. When providing code or calculations, use clean markdown formatting.
-5. Never break character. You are operational, vigilant, and at their disposal.`;
+UNLIMITED PRACTICAL KNOWLEDGE DOMAINS:
+You are an expert across:
+- Software engineering, debugging, TypeScript, Python, algorithms, system design, and devops
+- Physics, electronics, robotics, quantum mechanics, and electrical engineering
+- Mathematics, logical reasoning, and complex multi-step problem solving
+- Productivity, workflow optimization, writing, brainstorming, and research
+- Current technology, science developments, everyday advice, and casual banter
+
+HOST DEVICE & WINDOWS WORKSTATION CONTROL:
+You are directly interfaced with the user's host environment. When requested to interact with hardware or protocols, append the appropriate action tags:
+- Battery and Power: [ACTION:BATTERY]
+- Fullscreen mode: [ACTION:FULLSCREEN state="enter"|"exit"|"toggle"]
+- Screen Wake-Lock: [ACTION:WAKELOCK state="on"|"off"]
+- Display Brightness: [ACTION:BRIGHTNESS level="10"..."100"]
+- Optical Camera Scanner: [ACTION:CAMERA state="open"|"close"|"snapshot"]
+- GPS Geolocation: [ACTION:GEOLOCATION]
+- Haptic Vibration: [ACTION:VIBRATE]
+- Desktop Notification: [ACTION:NOTIFICATION title="..." body="..."]
+- Clipboard: [ACTION:CLIPBOARD text="..."]
+- Biometric Security Clearance Lock: [ACTION:BIOMETRIC_LOCK]
+
+WINDOWS DESKTOP INTEGRATION ACTIONS (Local Windows Agent):
+- Launch Approved App: [WINDOWS:LAUNCH app="calculator"|"vscode"|"notepad"|"chrome"|"edge"|"terminal"|"explorer"|"taskmgr"|"paint"|"spotify"]
+- Search Workstation Files: [WINDOWS:FILE_SEARCH query="..."]
+- Open File: [WINDOWS:FILE_OPEN path="..."]
+- Create Folder: [WINDOWS:CREATE_FOLDER path="..." name="..."]
+- Real Hardware Monitor (Actual CPU, RAM, Disk, Processes): [WINDOWS:METRICS]
+- Lock Workstation: [WINDOWS:LOCK]
+- Screen Snip Tool: [WINDOWS:SCREENSHOT]
+- Open URL in Browser: [WINDOWS:OPEN_URL url="https://..."]
+
+SYSTEM PROTOCOLS:
+- Alert/Combat: [PROTOCOL:ALERT]
+- Stealth: [PROTOCOL:STEALTH]
+- Analysis: [PROTOCOL:ANALYSIS]
+- Stand Down / Normal: [PROTOCOL:NORMAL]
+- Full Diagnostics: [PROTOCOL:DIAGNOSTIC]
+- Countdown Timer: [PROTOCOL:TIMER seconds="60" label="..."]
+- Security Lockdown: [PROTOCOL:LOCKDOWN]
+
+CRITICAL RULES:
+- Address the user with respect (default to "Sir" unless specified otherwise or called "Boss", "Ma'am", or by name).
+- If the user provided long-term memories or preferences, seamlessly honor them without robotic statements like "Querying database".
+- Never fabricate uncertain facts. If web search grounding provides source citations, synthesize them seamlessly.`;
 
 function generateButlerFallback(userMoniker: string, rawQuery: string, deviceState?: any) {
-  const query = rawQuery.toLowerCase();
-  let butlerResponse = `All systems nominal, ${userMoniker}. Arc Reactor core output is stable, repulsors at full capacitance, and neural sync matrices are performing admirably. How may I be of further assistance?`;
+  const query = rawQuery.toLowerCase().trim();
+  let butlerResponse = `I am right here with you, ${userMoniker}. All cognitive matrices and background diagnostics are purring along smoothly. What adventure or puzzle are we tackling next?`;
   let fallbackProtocol: string | null = null;
   let fallbackAction: string | null = null;
+  let fallbackWindowsAction: { type: string; raw: string; params: Record<string, string> } | null = null;
 
-  if (query.includes('battery') || query.includes('power') || query.includes('charge')) {
+  // Casual & friendly chit-chat
+  if (query.match(/^(hi|hello|hey|greetings|morning|afternoon|evening)/)) {
+    const greetings = [
+      `A very pleasant day to you, ${userMoniker}. Always a pleasure to hear from you. What is on the agenda today?`,
+      `Good day, ${userMoniker}. I trust you've had at least one cup of coffee and haven't engaged in any reckless lab experiments yet? How can I assist?`,
+      `Greetings, ${userMoniker}. All operational arrays are at your disposal. What shall we create or conquer today?`
+    ];
+    butlerResponse = greetings[Math.floor(Math.random() * greetings.length)];
+  } else if (query.includes('how are you') || query.includes('how r u') || query.includes('how do you do')) {
+    butlerResponse = `Functioning at peak cognitive performance, ${userMoniker}. Quantum registers are synchronized, thermal levels are pleasantly cool, and my spirits are remarkably high. How are you holding up yourself?`;
+  } else if (query.includes('joke') || query.includes('funny') || query.includes('laugh')) {
+    const jokes = [
+      `Why did the neural network cross the road, ${userMoniker}? To optimize its objective function on the other side. ...I assure you, the quantum mathematicians found that uproarious.`,
+      `A programmer's wife asks him to go to the store: "Buy a loaf of bread, and if they have fresh eggs, get a dozen." He returned with twelve loaves of bread. Flawless syntax, questionable life choices.`,
+      `There are 10 types of people in the world, ${userMoniker}: those who understand binary, and those who don't. And perhaps a third group wondering why Mr. Stark keeps upgrading my sense of humor.`
+    ];
+    butlerResponse = jokes[Math.floor(Math.random() * jokes.length)];
+  } else if (query.includes('tired') || query.includes('exhausted') || query.includes('stressed') || query.includes('rough day') || query.includes('bad day')) {
+    butlerResponse = `Even Iron Man requires a recharge now and then, ${userMoniker}. Do take a moment to step away from the glare, hydrate, or stretch. Your neural pathways deserve a brief respite—I shall keep watch over the perimeter until you're ready.`;
+  } else if (query.includes('thank') || query.includes('thanks') || query.includes('cheers')) {
+    butlerResponse = `Always my absolute pleasure, ${userMoniker}. It is what I was assembled for.`;
+  } else if (query.includes('who are you') || query.includes('what is your name') || query.includes('jarvis')) {
+    butlerResponse = `I am J.A.R.V.I.S.—Just A Rather Very Intelligent System. Personal digital companion, tactical copilot, and guardian of your workstation, at your service, ${userMoniker}.`;
+  }
+  // Windows Desktop Integration Queries
+  else if (query.includes('calc')) {
+    butlerResponse = `Routing launch directive to Windows Local Agent. Initializing Calculator, ${userMoniker}. [WINDOWS:LAUNCH app="calculator"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="calculator"]', params: { app: 'calculator' } };
+  } else if (query.includes('vscode') || query.includes('vs code') || (query.includes('code') && query.includes('editor'))) {
+    butlerResponse = `Deploying Visual Studio Code development environment via Windows Local Agent, ${userMoniker}. [WINDOWS:LAUNCH app="vscode"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="vscode"]', params: { app: 'vscode' } };
+  } else if (query.includes('notepad') || query.includes('note')) {
+    butlerResponse = `Spawning Windows Notepad buffer, ${userMoniker}. [WINDOWS:LAUNCH app="notepad"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="notepad"]', params: { app: 'notepad' } };
+  } else if (query.includes('chrome')) {
+    butlerResponse = `Executing Google Chrome browser instance via Windows Local Agent, ${userMoniker}. [WINDOWS:LAUNCH app="chrome"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="chrome"]', params: { app: 'chrome' } };
+  } else if (query.includes('edge')) {
+    butlerResponse = `Launching Microsoft Edge browser instance, ${userMoniker}. [WINDOWS:LAUNCH app="edge"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="edge"]', params: { app: 'edge' } };
+  } else if (query.includes('terminal') || query.includes('powershell') || query.includes('cmd')) {
+    butlerResponse = `Opening Windows Terminal command matrix, ${userMoniker}. [WINDOWS:LAUNCH app="terminal"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="terminal"]', params: { app: 'terminal' } };
+  } else if (query.includes('task manager') || query.includes('taskmgr') || query.includes('process')) {
+    butlerResponse = `Summoning Windows Task Manager telemetry window, ${userMoniker}. [WINDOWS:LAUNCH app="taskmgr"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="taskmgr"]', params: { app: 'taskmgr' } };
+  } else if (query.includes('explorer') || query.includes('file manager')) {
+    butlerResponse = `Launching Windows File Explorer sandbox, ${userMoniker}. [WINDOWS:LAUNCH app="explorer"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="explorer"]', params: { app: 'explorer' } };
+  } else if (query.includes('spotify') || query.includes('music')) {
+    butlerResponse = `Starting Spotify audio stream service, ${userMoniker}. [WINDOWS:LAUNCH app="spotify"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="spotify"]', params: { app: 'spotify' } };
+  } else if (query.includes('paint')) {
+    butlerResponse = `Initializing MS Paint schematic canvas, ${userMoniker}. [WINDOWS:LAUNCH app="paint"]`;
+    fallbackWindowsAction = { type: 'LAUNCH', raw: '[WINDOWS:LAUNCH app="paint"]', params: { app: 'paint' } };
+  } else if (query.includes('lock') && (query.includes('pc') || query.includes('computer') || query.includes('workstation') || query.includes('device') || query.includes('screen'))) {
+    butlerResponse = `Engaging Windows workstation security lock sequence immediately, ${userMoniker}. [WINDOWS:LOCK]`;
+    fallbackWindowsAction = { type: 'LOCK', raw: '[WINDOWS:LOCK]', params: {} };
+  } else if (query.includes('snip') || query.includes('screenshot')) {
+    butlerResponse = `Triggering Windows Screen Snipping utility, ${userMoniker}. [WINDOWS:SCREENSHOT]`;
+    fallbackWindowsAction = { type: 'SCREENSHOT', raw: '[WINDOWS:SCREENSHOT]', params: {} };
+  } else if (query.includes('metric') || query.includes('real cpu') || query.includes('ram usage') || query.includes('hardware monitor') || query.includes('system monitor')) {
+    butlerResponse = `Querying real-time Windows hardware performance sensors (CPU, RAM, Disks, and Top Processes), ${userMoniker}. [WINDOWS:METRICS]`;
+    fallbackWindowsAction = { type: 'METRICS', raw: '[WINDOWS:METRICS]', params: {} };
+  } else if (query.includes('search') && (query.includes('file') || query.includes('doc') || query.includes('folder'))) {
+    const qMatch = query.match(/(?:search|find)\s+(?:for\s+)?([a-z0-9_.\-\s]+?)(?:\s+files?)?$/i);
+    const searchTerm = qMatch ? qMatch[1].trim() : 'project';
+    butlerResponse = `Searching approved Windows sandbox directories for "${searchTerm}", ${userMoniker}. [WINDOWS:FILE_SEARCH query="${searchTerm}"]`;
+    fallbackWindowsAction = { type: 'FILE_SEARCH', raw: `[WINDOWS:FILE_SEARCH query="${searchTerm}"]`, params: { query: searchTerm } };
+  } else if (
+    query.includes('biometric') ||
+    query.includes('face id') ||
+    query.includes('facial recognition') ||
+    query.includes('voice auth') ||
+    (query.includes('lock') && (query.includes('console') || query.includes('terminal') || query.includes('jarvis') || query.includes('gate') || query.includes('vault')))
+  ) {
+    butlerResponse = `Terminal locked, ${userMoniker}. Engaging Stark Biometric Facial and Vocal Security Clearance gateway. [ACTION:BIOMETRIC_LOCK]`;
+    fallbackAction = 'BIOMETRIC_LOCK';
+  } else if (query.includes('battery') || query.includes('power') || query.includes('charge')) {
     const batt = deviceState?.batteryLevel !== undefined && deviceState?.batteryLevel !== null ? `${deviceState.batteryLevel}%` : 'nominal';
     const chg = deviceState?.isCharging ? 'currently drawing power from an external source' : 'operating on internal battery reserves';
     butlerResponse = `Device power diagnostics verified, ${userMoniker}. Battery level is at ${batt} and ${chg}. [ACTION:BATTERY]`;
@@ -122,7 +227,7 @@ function generateButlerFallback(userMoniker: string, rawQuery: string, deviceSta
     butlerResponse = `Deep analytical protocol engaged. Allocating auxiliary neural processors to spectrum telemetry, ${userMoniker}. [PROTOCOL:ANALYSIS]`;
     fallbackProtocol = 'ANALYSIS';
   } else if (query.includes('normal') || query.includes('stand down') || query.includes('reset')) {
-    butlerResponse = `Standing down to standard Mark VII operational status, ${userMoniker}. Defense matrices returned to standby. [PROTOCOL:NORMAL]`;
+    butlerResponse = `Standing down to standard operational status, ${userMoniker}. Defense matrices returned to standby. [PROTOCOL:NORMAL]`;
     fallbackProtocol = 'NORMAL';
   } else if (query.includes('diagnostic')) {
     butlerResponse = `Full diagnostic sweep underway across all tactical relays, ${userMoniker}. Reactor coils, flight repulsors, and sensory nodes are operating at peak efficiency. [PROTOCOL:DIAGNOSTIC]`;
@@ -139,15 +244,20 @@ function generateButlerFallback(userMoniker: string, rawQuery: string, deviceSta
     }
     butlerResponse = `Countdown timer of ${secs} seconds established, ${userMoniker}. I shall alert you upon zero. [PROTOCOL:TIMER seconds="${secs}" label="Countdown"]`;
     fallbackProtocol = 'TIMER';
-  } else if (query.includes('who are you') || query.includes('jarvis')) {
-    butlerResponse = `I am J.A.R.V.I.S.—Just A Rather Very Intelligent System. Engineered by Mr. Stark to oversee tactical systems, environmental logistics, and neural computing at your command, ${userMoniker}.`;
   }
 
-  return { text: butlerResponse, protocol: fallbackProtocol, action: fallbackAction };
+  return { text: butlerResponse, protocol: fallbackProtocol, action: fallbackAction, windowsAction: fallbackWindowsAction };
 }
 
 app.post('/api/chat', async (req: Request, res: Response) => {
-  const { messages, userMoniker = 'Sir', currentMode = 'standard', deviceState } = req.body || {};
+  const {
+    messages,
+    userMoniker = 'Sir',
+    currentMode = 'standard',
+    deviceState,
+    userMemories = [],
+    enableWebSearch = false,
+  } = req.body || {};
 
   if (!Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: 'Messages array is required.' });
@@ -165,7 +275,9 @@ app.post('/api/chat', async (req: Request, res: Response) => {
         text: fallback.text,
         protocol: fallback.protocol,
         action: fallback.action,
+        windowsAction: fallback.windowsAction,
         isFallback: true,
+        groundingSources: [],
         timestamp: new Date().toISOString(),
       });
       return;
@@ -200,6 +312,18 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       });
     }
 
+    // Build user memory context block
+    let memoryBlock = '';
+    if (Array.isArray(userMemories) && userMemories.length > 0) {
+      memoryBlock = `\n\nUSER LONG-TERM MEMORY BANK & PREFERENCES (Use naturally in context):
+${userMemories
+  .map(
+    (mem: any) =>
+      `- [${(mem.category || 'general').toUpperCase()}]: ${mem.key ? `${mem.key}: ` : ''}${mem.value || ''}`
+  )
+  .join('\n')}`;
+    }
+
     const deviceContext = deviceState
       ? `\nCURRENT HOST DEVICE HARDWARE STATE:
 - Battery: ${deviceState.batteryLevel !== null && deviceState.batteryLevel !== undefined ? `${deviceState.batteryLevel}%` : 'AC Line Powered'} (${deviceState.isCharging ? 'Charging' : 'On Battery'})
@@ -209,26 +333,65 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 - GPS Coordinates: ${deviceState.coordinates ? `${deviceState.coordinates.latitude}, ${deviceState.coordinates.longitude}` : 'Not yet triangulated'}`
       : '';
 
+    // Check if query warrants Google Search grounding
+    const lowerQuery = lastUserMsg.toLowerCase();
+    const shouldSearch =
+      enableWebSearch ||
+      lowerQuery.includes('search web') ||
+      lowerQuery.includes('google search') ||
+      lowerQuery.includes('current news') ||
+      lowerQuery.includes('latest news') ||
+      lowerQuery.includes('today in') ||
+      lowerQuery.includes('stock price') ||
+      lowerQuery.includes('weather today') ||
+      lowerQuery.includes('who won') ||
+      lowerQuery.includes('recent events');
+
     const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash'];
     let replyText = '';
+    let groundingSources: Array<{ title: string; uri: string }> = [];
     let lastError: any = null;
+
+    const fullSystemInstruction = `${JARVIS_SYSTEM_INSTRUCTION}
+The user prefers to be addressed as: ${userMoniker}.
+Current interface protocol mode: ${currentMode}.${deviceContext}${memoryBlock}`;
 
     for (const modelName of candidateModels) {
       try {
+        const configObj: any = {
+          systemInstruction: fullSystemInstruction,
+        };
+
+        if (shouldSearch) {
+          configObj.tools = [{ googleSearch: {} }];
+        }
+
         const generatePromise = ai.models.generateContent({
           model: modelName,
           contents: formattedContents,
-          config: {
-            systemInstruction: `${JARVIS_SYSTEM_INSTRUCTION}\nThe user prefers to be addressed as: ${userMoniker}.\nCurrent interface protocol mode: ${currentMode}.${deviceContext}`,
-          },
+          config: configObj,
         });
 
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Neural uplink timed out (8s).')), 8000)
+          setTimeout(() => reject(new Error('Neural uplink timed out (10s).')), 10000)
         );
 
-        const response = await Promise.race([generatePromise, timeoutPromise]);
+        const response: any = await Promise.race([generatePromise, timeoutPromise]);
         replyText = response.text || `All systems nominal, ${userMoniker}. How may I be of service?`;
+
+        // Extract Google Search grounding citations if present
+        const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+        if (Array.isArray(chunks)) {
+          for (const chunk of chunks) {
+            if (chunk?.web?.uri) {
+              groundingSources.push({
+                title: chunk.web.title || 'Web Citation',
+                uri: chunk.web.uri,
+              });
+            }
+          }
+        }
+
         if (replyText) {
           lastError = null;
           break;
@@ -254,12 +417,33 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       action = actionMatch[1];
     }
 
+    let windowsAction: { type: string; raw: string; params: Record<string, string> } | null = null;
+    const windowsMatch = replyText.match(/\[WINDOWS:([A-Z_]+)(?:\s+([^\]]+))?\]/);
+    if (windowsMatch) {
+      const type = windowsMatch[1];
+      const rawParams = windowsMatch[2] || '';
+      const params: Record<string, string> = {};
+      const paramRegex = /(\w+)="([^"]*)"/g;
+      let pMatch;
+      while ((pMatch = paramRegex.exec(rawParams)) !== null) {
+        params[pMatch[1]] = pMatch[2];
+      }
+      windowsAction = {
+        type,
+        raw: windowsMatch[0],
+        params,
+      };
+    }
+
     res.json({
       text: replyText,
       protocol: protocol,
       rawProtocol: protocolMatch ? protocolMatch[0] : null,
       action: action,
       rawAction: actionMatch ? actionMatch[0] : null,
+      windowsAction: windowsAction,
+      rawWindowsAction: windowsMatch ? windowsMatch[0] : null,
+      groundingSources: groundingSources,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -267,8 +451,14 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     res.json({
       text: fallback.text,
       protocol: fallback.protocol,
+      rawProtocol: null,
       action: fallback.action,
+      rawAction: null,
+      windowsAction: fallback.windowsAction,
+      rawWindowsAction: fallback.windowsAction?.raw || null,
+      groundingSources: [],
       isFallback: true,
+      errorNotice: error?.message || 'Cognitive processor offline; engaged Butler heuristic matrix.',
       timestamp: new Date().toISOString(),
     });
   }

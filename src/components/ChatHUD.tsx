@@ -6,6 +6,7 @@ import {
   MicOff,
   Volume2,
   VolumeX,
+  Square,
   Copy,
   Check,
   RotateCcw,
@@ -15,6 +16,10 @@ import {
   Shield,
   Bot,
   User as UserIcon,
+  Laptop,
+  Globe,
+  ExternalLink,
+  MessageCircle,
 } from 'lucide-react';
 import { sfx } from '../utils/audioSynthesizer';
 
@@ -27,11 +32,15 @@ interface ChatHUDProps {
   onToggleListening: () => void;
   interimTranscript: string;
   onReplayAudio: (text: string) => void;
+  onStopSpeaking?: () => void;
+  onRepeatLastResponse?: () => void;
   onOpenSettings: () => void;
   onClearChat: () => void;
   autoSpeak: boolean;
   onToggleAutoSpeak: () => void;
   mode: SystemMode;
+  enableWebSearch: boolean;
+  onToggleWebSearch: () => void;
 }
 
 export const ChatHUD: React.FC<ChatHUDProps> = ({
@@ -43,11 +52,15 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
   onToggleListening,
   interimTranscript,
   onReplayAudio,
+  onStopSpeaking,
+  onRepeatLastResponse,
   onOpenSettings,
   onClearChat,
   autoSpeak,
   onToggleAutoSpeak,
   mode,
+  enableWebSearch,
+  onToggleWebSearch,
 }) => {
   const [inputText, setInputText] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -75,14 +88,18 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
   };
 
   const quickPrompts = [
+    "Let's just chat, how's your day?",
+    'Tell me a witty joke',
+    'Search latest tech news',
+    'Explain quantum entanglement simply',
+    'Lock console (Biometric Gate)',
+    'Launch VS Code',
+    'Open Calculator',
+    'Real CPU & RAM metrics',
+    'Search workstation files',
     'Check battery status',
     'Toggle full screen mode',
-    'Activate optical scanner',
-    'Engage screen wake-lock',
-    'Dim screen to 30%',
-    'Triangulate GPS coordinates',
     'Run full diagnostic scan',
-    'Engage combat alert protocols',
   ];
 
   // Render markdown-like blocks cleanly
@@ -112,15 +129,16 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
         );
       }
 
-      // Format bold text, protocol tags, action tags, and line breaks
+      // Format bold text, protocol tags, action tags, windows tags, and line breaks
       const paragraphs = part.split('\n\n');
       return (
         <div key={index} className="space-y-1.5">
           {paragraphs.map((p, pIdx) => {
             const protocolMatch = p.match(/\[PROTOCOL:([A-Z_]+)(?:\s+([^\]]+))?\]/);
             const actionMatch = p.match(/\[ACTION:([A-Z_]+)(?:\s+([^\]]+))?\]/);
+            const windowsMatch = p.match(/\[WINDOWS:([A-Z_]+)(?:\s+([^\]]+))?\]/);
             const cleanParagraph = p
-              .replace(/\[(PROTOCOL|ACTION):[^\]]+\]/g, '')
+              .replace(/\[(PROTOCOL|ACTION|WINDOWS):[^\]]+\]/g, '')
               .trim();
 
             return (
@@ -135,9 +153,15 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
                   </div>
                 )}
                 {actionMatch && (
-                  <div className="inline-flex items-center gap-1.5 my-1 px-2.5 py-1 rounded bg-purple-950/80 border border-purple-500/50 text-[10px] font-orbitron text-purple-300">
+                  <div className="inline-flex items-center gap-1.5 my-1 mr-2 px-2.5 py-1 rounded bg-purple-950/80 border border-purple-500/50 text-[10px] font-orbitron text-purple-300">
                     <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
                     <span>DEVICE ACTION: {actionMatch[1]}</span>
+                  </div>
+                )}
+                {windowsMatch && (
+                  <div className="inline-flex items-center gap-1.5 my-1 px-2.5 py-1 rounded bg-indigo-950/90 border border-indigo-400/60 text-[10px] font-orbitron text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.25)]">
+                    <Laptop className="w-3 h-3 text-indigo-400" />
+                    <span>WINDOWS AGENT: {windowsMatch[1]}</span>
                   </div>
                 )}
               </div>
@@ -173,6 +197,21 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Web Search Grounding Pill */}
+          <button
+            type="button"
+            onClick={onToggleWebSearch}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-mono-tech border transition-all ${
+              enableWebSearch
+                ? 'bg-emerald-950/60 border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+            title="Toggle Live Web Grounding for current information"
+          >
+            <Globe className="w-3 h-3 text-cyan-400" />
+            <span>SEARCH: {enableWebSearch ? 'ON' : 'OFF'}</span>
+          </button>
+
           <button
             onClick={onToggleAutoSpeak}
             className={`p-1.5 rounded border transition-colors ${
@@ -202,6 +241,34 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Voice Playback Interrupt Bar (Active when J.A.R.V.I.S. speaks) */}
+      {isSpeaking && (
+        <div className="bg-cyan-950/90 border-b border-cyan-500/60 px-4 py-2 flex items-center justify-between text-xs font-mono-tech animate-fade-in shadow-[0_0_15px_rgba(6,182,212,0.3)] z-20">
+          <div className="flex items-center gap-2.5 text-cyan-300">
+            <div className="flex items-center gap-1">
+              <span className="w-1 h-3 bg-cyan-400 animate-pulse" />
+              <span className="w-1 h-4 bg-cyan-400 animate-pulse delay-75" />
+              <span className="w-1 h-2 bg-cyan-400 animate-pulse delay-150" />
+              <span className="w-1 h-5 bg-cyan-400 animate-pulse delay-100" />
+            </div>
+            <span className="tracking-wide">J.A.R.V.I.S. VOCAL SYNTHESIS TRANSMITTING...</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onStopSpeaking && (
+              <button
+                onClick={onStopSpeaking}
+                className="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500 text-red-300 text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                title="Interrupt and stop voice playback"
+              >
+                <Square className="w-3 h-3 fill-current" />
+                <span>STOP SPEAKING</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Message History Feed */}
       <div
@@ -246,6 +313,30 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
                 <div className="text-slate-100 font-sans text-sm leading-relaxed">
                   {renderMessageContent(msg.text)}
                 </div>
+
+                {/* Grounding Source Citations (Web Search Results) */}
+                {!isUser && msg.groundingSources && msg.groundingSources.length > 0 && (
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80">
+                    <div className="text-[10px] font-mono-tech text-emerald-400 flex items-center gap-1.5 mb-1.5">
+                      <Globe className="w-3 h-3 text-emerald-400" />
+                      <span>VERIFIED WEB SOURCES:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {msg.groundingSources.map((source, sIdx) => (
+                        <a
+                          key={sIdx}
+                          href={source.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-0.5 rounded bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-200 text-[10px] font-mono-tech flex items-center gap-1 transition-colors hover:text-emerald-100"
+                        >
+                          <span className="truncate max-w-[180px]">{source.title || 'Web Citation'}</span>
+                          <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-70" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Bubble action toolbar (for assistant messages) */}
                 {!isUser && (
@@ -303,6 +394,17 @@ export const ChatHUD: React.FC<ChatHUDProps> = ({
       {/* Quick Prompts Bar */}
       <div className="px-4 py-2 bg-slate-950/90 border-t border-slate-900 flex items-center gap-1.5 overflow-x-auto no-scrollbar z-10">
         <span className="text-[9px] font-mono-tech text-slate-500 uppercase shrink-0">DIRECTIVES:</span>
+        {onRepeatLastResponse && (
+          <button
+            onClick={onRepeatLastResponse}
+            disabled={isProcessing}
+            className="px-2.5 py-1 rounded-full bg-cyan-950/50 hover:bg-cyan-900/70 border border-cyan-500/50 text-[10px] font-mono-tech text-cyan-300 shrink-0 transition-all active:scale-95 flex items-center gap-1"
+            title="Repeat last assistant response aloud"
+          >
+            <RotateCcw className="w-2.5 h-2.5" />
+            <span>REPEAT LAST</span>
+          </button>
+        )}
         {quickPrompts.map((p, idx) => (
           <button
             key={idx}

@@ -199,4 +199,93 @@ export const sfx = {
       osc.stop(now + 0.2);
     }
   },
+
+  // Biometric scanner optical laser sweep beep
+  playScanBeep: (enabled = true) => {
+    if (!enabled) return;
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1760, now); // A6
+    osc.frequency.exponentialRampToValueAtTime(2349, now + 0.05); // D7
+
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.07);
+  },
+
+  // Stark Industries clearance verified - affirmative chord
+  playAccessGranted: (enabled = true) => {
+    if (!enabled) return;
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const freqs = [523.25, 659.25, 783.99, 1046.5, 1318.5]; // C5, E5, G5, C6, E6
+
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+      gain.gain.setValueAtTime(0.08, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.4);
+    });
+  },
+
+  // Security violation / mismatch warning alarm
+  playAccessDenied: (enabled = true) => {
+    if (!enabled) return;
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(180, now);
+    osc1.frequency.linearRampToValueAtTime(130, now + 0.25);
+
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(188, now); // Detuned for dissonance
+    osc2.frequency.linearRampToValueAtTime(135, now + 0.25);
+
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.32);
+    osc2.stop(now + 0.32);
+  },
+
+  // Convenience aliases for intuitive UX sound triggers
+  playSuccess: (enabled = true) => sfx.playAccessGranted(enabled),
+  playError: (enabled = true) => sfx.playAccessDenied(enabled),
+  playBeep: (enabled = true) => sfx.playScanBeep(enabled),
+  playChirp: (enabled = true) => sfx.playProtocolChirp(enabled),
 };

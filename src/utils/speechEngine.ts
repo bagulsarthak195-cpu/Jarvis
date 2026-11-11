@@ -17,7 +17,7 @@ export interface VoiceOption {
 // Strip markdown and protocol brackets so spoken voice is 100% natural
 export function cleanTextForSpeech(rawText: string): string {
   return rawText
-    .replace(/\[(PROTOCOL|ACTION):[^\]]+\]/g, '') // remove protocol and action tags
+    .replace(/\[(PROTOCOL|ACTION|WINDOWS):[^\]]+\]/g, '') // remove protocol, action, and windows tags
     .replace(/```[\s\S]*?```/g, 'Code block omitted for brevity.') // replace code blocks
     .replace(/`([^`]+)`/g, '$1') // unwrap inline code
     .replace(/\*\*([^*]+)\*\*/g, '$1') // unwrap bold
